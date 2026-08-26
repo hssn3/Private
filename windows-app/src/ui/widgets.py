@@ -95,12 +95,25 @@ class AppTile(ctk.CTkFrame):
             self, text=theme.fa(detail), font=theme.font(10),
             text_color=theme.TEXT_DIM, anchor="e",
         )
-        self._detail.grid(row=1, column=1, sticky="ew", padx=(10, 0), pady=(0, 12))
+        self._detail.grid(row=1, column=1, sticky="ew", padx=(10, 0), pady=(0, 0 if app.warning else 12))
+
+        # Say up front what this app will NOT bring back, rather than letting
+        # someone find out on the day they need it.
+        self._warning = None
+        if app.warning:
+            self._warning = ctk.CTkLabel(
+                self, text=theme.fa("⚠ " + app.warning), font=theme.font(9),
+                text_color=theme.WARN, anchor="e", justify="right", wraplength=230,
+            )
+            self._warning.grid(row=2, column=0, columnspan=3, sticky="ew", padx=12, pady=(2, 10))
 
         self._check = ctk.CTkLabel(self, text="○", font=theme.font(17), text_color=theme.TEXT_DIM)
         self._check.grid(row=0, column=0, rowspan=2, padx=(12, 4))
 
-        for widget in (self, self._name, self._detail, self._check, self._icon_label, icon_holder):
+        clickable = [self, self._name, self._detail, self._check, self._icon_label, icon_holder]
+        if self._warning is not None:
+            clickable.append(self._warning)
+        for widget in clickable:
             widget.bind("<Button-1>", self._clicked)
             widget.bind("<Enter>", self._enter)
             widget.bind("<Leave>", self._leave)

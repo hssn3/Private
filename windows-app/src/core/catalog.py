@@ -30,6 +30,7 @@ class KnownApp:
     data: tuple[DataSource, ...] = ()
     excludes: tuple[str, ...] = ()
     note: str = ""
+    warning: str = ""   # shown in amber on the card - what will NOT come back
 
 
 # Directories that are pure cache. Copying them wastes minutes and gigabytes
@@ -47,6 +48,15 @@ ELECTRON_EXCLUDES = (
     "Crashpad", "logs", "ShaderCache", "DawnCache", "blob_storage",
 )
 
+# Chromium and Firefox seal cookies and saved passwords with a key that
+# Windows ties to the machine and user account. The files copy fine; they just
+# will not decrypt anywhere else. Better to say so on the card than to let
+# someone discover it on the day their drive died.
+DPAPI_WARNING = (
+    "کوکی و پسورد روی ویندوز جدید باز نمی‌شوند (رمزگذاری DPAPI) - "
+    "بوکمارک، تاریخچه و اکستنشن‌ها برمی‌گردند"
+)
+
 CATALOG: tuple[KnownApp, ...] = (
     # ---------------------------------------------------------- browsers
     KnownApp(
@@ -62,7 +72,8 @@ CATALOG: tuple[KnownApp, ...] = (
         registry_names=("Google Chrome",),
         data=(DataSource(r"%LOCALAPPDATA%\Google\Chrome\User Data", "UserData"),),
         excludes=CHROMIUM_EXCLUDES,
-        note="پروفایل، بوکمارک، پسورد‌ها، اکستنشن‌ها",
+        note="پروفایل، بوکمارک، تاریخچه، اکستنشن‌ها",
+        warning=DPAPI_WARNING,
     ),
     KnownApp(
         key="edge",
@@ -76,6 +87,7 @@ CATALOG: tuple[KnownApp, ...] = (
         registry_names=("Microsoft Edge",),
         data=(DataSource(r"%LOCALAPPDATA%\Microsoft\Edge\User Data", "UserData"),),
         excludes=CHROMIUM_EXCLUDES,
+        warning=DPAPI_WARNING,
     ),
     KnownApp(
         key="brave",
@@ -89,6 +101,7 @@ CATALOG: tuple[KnownApp, ...] = (
         registry_names=("Brave",),
         data=(DataSource(r"%LOCALAPPDATA%\BraveSoftware\Brave-Browser\User Data", "UserData"),),
         excludes=CHROMIUM_EXCLUDES,
+        warning=DPAPI_WARNING,
     ),
     KnownApp(
         key="firefox",
@@ -102,6 +115,7 @@ CATALOG: tuple[KnownApp, ...] = (
         registry_names=("Mozilla Firefox",),
         data=(DataSource(r"%APPDATA%\Mozilla\Firefox", "Profiles"),),
         excludes=("cache2", "startupCache", "thumbnails", "shader-cache"),
+        warning=DPAPI_WARNING,
     ),
 
     # ------------------------------------------------------ editors / IDEs
@@ -121,6 +135,7 @@ CATALOG: tuple[KnownApp, ...] = (
         ),
         excludes=ELECTRON_EXCLUDES + ("workspaceStorage/*/state.vscdb.backup",),
         note="تنظیمات، کی‌بایندینگ، اکستنشن‌ها، چت‌ها",
+        warning="لاگین خود Cursor در Credential Manager ویندوز است و منتقل نمی‌شود",
     ),
     KnownApp(
         key="vscode",
@@ -315,6 +330,24 @@ CATALOG: tuple[KnownApp, ...] = (
         registry_names=("Postman",),
         data=(DataSource(r"%APPDATA%\Postman", "AppData"),),
         excludes=ELECTRON_EXCLUDES + ("files",),
+    ),
+
+    KnownApp(
+        key="dev-credentials",
+        name="توکن‌ها و کلیدهای توسعه",
+        category="ابزار توسعه",
+        emoji="🔑",
+        data=(
+            DataSource(r"%USERPROFILE%\.netrc", "netrc"),
+            DataSource(r"%USERPROFILE%\.config\gh", "github-cli"),
+            DataSource(r"%USERPROFILE%\.aws", "aws"),
+            DataSource(r"%USERPROFILE%\.kube\config", "kube-config"),
+            DataSource(r"%USERPROFILE%\.pypirc", "pypirc"),
+            DataSource(r"%USERPROFILE%\.cargo\credentials.toml", "cargo-credentials"),
+            DataSource(r"%USERPROFILE%\.gradle\gradle.properties", "gradle-properties"),
+        ),
+        note="این‌ها فایل ساده‌اند و روی ویندوز جدید کار می‌کنند",
+        warning="داخل بکاپ به‌صورت رمزنشده هستند - فایل zip را جایی نفرست",
     ),
 
     # ---------------------------------------------------------- messaging

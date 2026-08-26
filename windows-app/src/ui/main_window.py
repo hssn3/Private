@@ -11,7 +11,7 @@ import tkinter
 
 import customtkinter as ctk
 
-from core import collector, detect, icons, paths, restore, shortcuts, uploader
+from core import collector, detect, icons, paths, projects, restore, shortcuts, uploader
 from core.config import ConfigStore
 from core.logging_setup import log
 from core.service import BackupService
@@ -291,24 +291,63 @@ class MainWindow(ctk.CTk):
     def _page_transfer(self) -> None:
         page = self._new_page("transfer")
         page.grid_columnconfigure(0, weight=1)
+        page.grid_rowconfigure(0, weight=1)
 
-        card = GlassCard(page)
+        # This page grows with the number of project folders, so it scrolls.
+        scroll = ctk.CTkScrollableFrame(page, fg_color="transparent")
+        scroll.grid(row=0, column=0, sticky="nsew")
+        scroll.grid_columnconfigure(0, weight=1)
+
+        card = GlassCard(scroll)
         card.grid(row=0, column=0, sticky="ew")
         card.grid_columnconfigure(0, weight=1)
         SectionTitle(
             card, "📤", "انتقال اطلاعات به فولدر 0",
-            "دیتا و تنظیمات برنامه‌های انتخاب‌شده در Apps کپی و شورتکاتشان ساخته می‌شود.",
+            "فولدرهای پروژه و دیتای برنامه‌های انتخاب‌شده داخل فولدر 0 کپی می‌شوند.",
         ).grid(row=0, column=0, sticky="ew", padx=16, pady=(14, 12))
 
-        note = ctk.CTkLabel(
+        # --- your own project folders, the reason any of this exists --------
+        projects_box = GlassCard(card, raised=True, corner_radius=theme.RADIUS_SM)
+        projects_box.grid(row=1, column=0, sticky="ew", padx=16, pady=(0, 12))
+        projects_box.grid_columnconfigure(0, weight=1)
+
+        header_row = ctk.CTkFrame(projects_box, fg_color="transparent")
+        header_row.grid(row=0, column=0, sticky="ew", padx=12, pady=(10, 4))
+        ctk.CTkLabel(
+            header_row, text=theme.fa("📁  فولدرهای پروژهٔ تو"), font=theme.font(13, "bold"),
+            text_color=theme.TEXT,
+        ).pack(side="right")
+        ctk.CTkButton(
+            header_row, text=theme.fa("+ افزودن فولدر"), width=130, height=30, font=theme.font(11),
+            fg_color=theme.ACCENT, hover_color=theme.ACCENT_HOVER,
+            corner_radius=theme.RADIUS_SM, command=self._add_project_folder,
+        ).pack(side="left")
+
+        ctk.CTkLabel(
+            projects_box,
+            text=theme.fa(
+                "لازم نیست کدهایت را جابه‌جا کنی - مسیرشان را همین‌جا اضافه کن. قبل از هر "
+                "بکاپ (حتی بکاپ‌های زمان‌بندی‌شده) به‌صورت افزایشی داخل Projects کپی می‌شوند. "
+                "node_modules و ‎.venv و امثالشان کپی نمی‌شوند، ولی ‎.git کامل نگه داشته می‌شود."
+            ),
+            font=theme.font(10), text_color=theme.TEXT_MUTED, justify="right",
+            wraplength=700, anchor="e",
+        ).grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 8))
+
+        self.project_list = ctk.CTkFrame(projects_box, fg_color="transparent")
+        self.project_list.grid(row=2, column=0, sticky="ew", padx=8, pady=(0, 10))
+        self.project_list.grid_columnconfigure(0, weight=1)
+
+        # --- app data -------------------------------------------------------
+        ctk.CTkLabel(
             card,
             text=theme.fa(
-                "نکته: قبل از انتقال، مرورگرها و ادیتورها را ببند. فایل‌های قفل‌شده "
-                "رد می‌شوند و ممکن است پروفایل ناقص کپی شود."
+                "نکته: قبل از انتقال دیتای برنامه‌ها، مرورگرها و ادیتورها را ببند. "
+                "فایل‌های قفل‌شده رد می‌شوند و ممکن است پروفایل ناقص کپی شود."
             ),
-            font=theme.font(11), text_color=theme.WARN, justify="right", wraplength=760, anchor="e",
-        )
-        note.grid(row=1, column=0, sticky="ew", padx=16, pady=(0, 12))
+            font=theme.font(11), text_color=theme.WARN, justify="right",
+            wraplength=740, anchor="e",
+        ).grid(row=2, column=0, sticky="ew", padx=16, pady=(0, 10))
 
         self.shortcut_check = ctk.CTkCheckBox(
             card, text=theme.fa("ساخت شورتکات برنامه‌ها در فولدر Shortcuts"),
@@ -316,7 +355,7 @@ class MainWindow(ctk.CTk):
         )
         if self.store.current.make_shortcuts:
             self.shortcut_check.select()
-        self.shortcut_check.grid(row=2, column=0, sticky="e", padx=16, pady=(0, 12))
+        self.shortcut_check.grid(row=3, column=0, sticky="e", padx=16, pady=(0, 12))
 
         self.transfer_button = ctk.CTkButton(
             card, text=theme.fa("شروع انتقال اطلاعات"), font=theme.font(14, "bold"),
@@ -324,32 +363,32 @@ class MainWindow(ctk.CTk):
             fg_color=theme.ACCENT, hover_color=theme.ACCENT_HOVER,
             command=self.start_transfer,
         )
-        self.transfer_button.grid(row=3, column=0, sticky="ew", padx=16, pady=(0, 12))
+        self.transfer_button.grid(row=4, column=0, sticky="ew", padx=16, pady=(0, 12))
 
         self.transfer_progress = ctk.CTkProgressBar(
             card, height=8, corner_radius=4, progress_color=theme.ACCENT, fg_color="#0a0f1e"
         )
         self.transfer_progress.set(0)
-        self.transfer_progress.grid(row=4, column=0, sticky="ew", padx=16)
+        self.transfer_progress.grid(row=5, column=0, sticky="ew", padx=16)
 
         self.transfer_status = ctk.CTkLabel(
             card, text=theme.fa("هنوز اجرا نشده"), font=theme.font(11),
             text_color=theme.TEXT_MUTED, anchor="e",
         )
-        self.transfer_status.grid(row=5, column=0, sticky="ew", padx=16, pady=(6, 16))
+        self.transfer_status.grid(row=6, column=0, sticky="ew", padx=16, pady=(6, 16))
 
-        results = GlassCard(page)
-        results.grid(row=1, column=0, sticky="nsew", pady=(12, 0))
-        page.grid_rowconfigure(1, weight=1)
+        results = GlassCard(scroll)
+        results.grid(row=1, column=0, sticky="ew", pady=(12, 0))
         results.grid_columnconfigure(0, weight=1)
-        results.grid_rowconfigure(1, weight=1)
         ctk.CTkLabel(
             results, text=theme.fa("نتیجهٔ آخرین انتقال"), font=theme.font(12, "bold"),
             text_color=theme.TEXT_MUTED, anchor="e",
         ).grid(row=0, column=0, sticky="ew", padx=16, pady=(12, 6))
-        self.transfer_results = ctk.CTkScrollableFrame(results, fg_color="transparent")
-        self.transfer_results.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 12))
+        self.transfer_results = ctk.CTkFrame(results, fg_color="transparent")
+        self.transfer_results.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 12))
         self.transfer_results.grid_columnconfigure(0, weight=1)
+
+        self._render_project_list()
 
     # ---------------------------------------------------- page 3: backup
     def _page_backup(self) -> None:
@@ -714,11 +753,89 @@ class MainWindow(ctk.CTk):
         self.stat_size.set(theme.human_size(total) if total else "—",
                            theme.WARN if total > 5 * 1024**3 else None)
 
+    # ---------------------------------------------------- project folders
+    def _project_sources(self) -> list[projects.ProjectSource]:
+        return projects.resolve(self.store.current.project_sources)
+
+    def _add_project_folder(self) -> None:
+        chosen = filedialog.askdirectory(title="فولدر پروژه را انتخاب کن")
+        if not chosen:
+            return
+        current = list(self.store.current.project_sources)
+        if chosen in current:
+            self.log_panel.append("info", "این فولدر قبلاً اضافه شده بود")
+            return
+        current.append(chosen)
+        self.store.update(project_sources=current)
+        self.log_panel.append("ok", f"فولدر پروژه اضافه شد: {chosen}")
+        self._render_project_list()
+
+    def _remove_project_folder(self, raw_path: str) -> None:
+        current = [p for p in self.store.current.project_sources if p != raw_path]
+        self.store.update(project_sources=current)
+        self.log_panel.append("info", f"فولدر پروژه حذف شد: {raw_path}")
+        self._render_project_list()
+
+    def _render_project_list(self) -> None:
+        for child in self.project_list.winfo_children():
+            child.destroy()
+
+        sources = self._project_sources()
+        if not sources:
+            ctk.CTkLabel(
+                self.project_list,
+                text=theme.fa("هنوز فولدری اضافه نشده - روی «افزودن فولدر» بزن"),
+                font=theme.font(11), text_color=theme.TEXT_DIM,
+            ).grid(row=0, column=0, pady=14)
+            return
+
+        for index, source in enumerate(sources):
+            row = ctk.CTkFrame(self.project_list, fg_color=theme.GLASS, corner_radius=theme.RADIUS_SM)
+            row.grid(row=index, column=0, sticky="ew", pady=3, padx=4)
+            row.grid_columnconfigure(1, weight=1)
+
+            ctk.CTkLabel(
+                row, text="📂" if source.exists else "❓", font=theme.font(14), width=28
+            ).grid(row=0, column=2, padx=(10, 4), pady=8)
+            ctk.CTkLabel(
+                row, text=source.display, font=theme.font(11), anchor="e",
+                text_color=theme.TEXT if source.exists else theme.BAD,
+            ).grid(row=0, column=1, sticky="ew", pady=8)
+
+            size_label = ctk.CTkLabel(
+                row, text=theme.fa("در حال محاسبه…"), font=theme.font(10),
+                text_color=theme.TEXT_MUTED, width=110,
+            )
+            size_label.grid(row=0, column=0, padx=(12, 4), pady=8)
+            self._measure_project_async(source, size_label)
+
+            ctk.CTkButton(
+                row, text="✕", width=28, height=24, font=theme.font(11),
+                fg_color="transparent", hover_color="#3b1f2b", text_color=theme.TEXT_MUTED,
+                command=lambda raw=str(source.path): self._remove_project_folder(raw),
+            ).grid(row=0, column=3, padx=(0, 8))
+
+    def _measure_project_async(self, source: projects.ProjectSource, label) -> None:
+        """Sizing a source tree can take seconds - never on the Tk thread."""
+        if not source.exists:
+            label.configure(text=theme.fa("مسیر نیست"), text_color=theme.BAD)
+            return
+
+        def worker() -> None:
+            size = projects.measure(source)
+            self._ui(lambda: label.configure(text=theme.human_size(size)))
+
+        threading.Thread(target=worker, name="project-size", daemon=True).start()
+
     # ------------------------------------------------------------ step 2
     def start_transfer(self) -> None:
         chosen = self._selected_apps()
-        if not chosen:
-            messagebox.showwarning("Backup Suite", theme.fa("اول حداقل یک برنامه را انتخاب کن."))
+        sources = self._project_sources()
+        if not chosen and not sources:
+            messagebox.showwarning(
+                "Backup Suite",
+                theme.fa("اول حداقل یک برنامه انتخاب کن یا یک فولدر پروژه اضافه کن."),
+            )
             return
 
         self.transfer_button.configure(state="disabled")
@@ -732,34 +849,39 @@ class MainWindow(ctk.CTk):
             ))
 
         def worker() -> None:
-            results = collector.collect(chosen, progress=progress)
+            project_results = projects.collect(sources, progress=progress) if sources else []
+            results = collector.collect(chosen, progress=progress) if chosen else []
             shortcut_count = 0
-            if self.store.current.make_shortcuts:
+            if chosen and self.store.current.make_shortcuts:
                 shortcut_count, _errors = shortcuts.create_all(chosen)
-            self._ui(lambda: self._transfer_done(results, shortcut_count))
+            self._ui(lambda: self._transfer_done(results, project_results, shortcut_count))
 
         threading.Thread(target=worker, name="transfer", daemon=True).start()
 
-    def _transfer_done(self, results, shortcut_count: int) -> None:
+    def _transfer_done(self, results, project_results, shortcut_count: int) -> None:
         for child in self.transfer_results.winfo_children():
             child.destroy()
 
+        # Projects first: they are the reason the whole thing exists.
+        rows = [("📁", r.name, r.bytes_copied, r.ok, r.message) for r in project_results]
+        rows += [("🧩", r.app_name, r.bytes_copied, r.ok, r.message) for r in results]
+
         total = 0
-        for index, result in enumerate(results):
-            total += result.bytes_copied
+        for index, (icon, name, size, ok, message) in enumerate(rows):
+            total += size
             row = GlassCard(self.transfer_results, corner_radius=theme.RADIUS_SM)
             row.grid(row=index, column=0, sticky="ew", pady=3, padx=4)
             row.grid_columnconfigure(1, weight=1)
             ctk.CTkLabel(
-                row, text="✅" if result.ok else "⚠️", font=theme.font(14), width=30
+                row, text=icon if ok else "⚠️", font=theme.font(14), width=30
             ).grid(row=0, column=2, padx=(10, 4), pady=8)
             ctk.CTkLabel(
-                row, text=result.app_name, font=theme.font(12, "bold"),
+                row, text=name, font=theme.font(12, "bold"),
                 text_color=theme.TEXT, anchor="e",
             ).grid(row=0, column=1, sticky="ew", pady=8)
             ctk.CTkLabel(
                 row,
-                text=theme.human_size(result.bytes_copied) if result.bytes_copied else theme.fa(result.message),
+                text=theme.human_size(size) if size else theme.fa(message),
                 font=theme.font(11), text_color=theme.TEXT_MUTED,
             ).grid(row=0, column=0, padx=12, pady=8)
 

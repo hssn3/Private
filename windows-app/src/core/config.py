@@ -24,6 +24,10 @@ class Config:
     schedule_enabled: bool = False
     selected_apps: list[str] = field(default_factory=list)
 
+    # Your own source folders, mirrored into 0\Projects before every backup.
+    project_sources: list[str] = field(default_factory=list)
+    sync_projects_before_backup: bool = True
+
     # Cloud target (the Railway file manager)
     cloud_enabled: bool = False
     cloud_url: str = ""

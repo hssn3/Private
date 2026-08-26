@@ -32,6 +32,7 @@ class DetectedApp:
     data_paths: list[tuple[Path, str]]   # (source, dest sub-path)
     excludes: tuple[str, ...]
     note: str = ""
+    warning: str = ""
     icon_path: str | None = None
     est_size: int = 0
 
@@ -78,6 +79,7 @@ def _scan_catalog() -> list[DetectedApp]:
                 data_paths=data,
                 excludes=app.excludes,
                 note=app.note,
+                warning=app.warning,
             )
         )
     return detected

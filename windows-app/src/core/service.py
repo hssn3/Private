@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
-from . import backup, paths, uploader
+from . import backup, paths, projects, uploader
 from .config import ConfigStore
 from .logging_setup import log
 from .scheduler import IntervalScheduler
@@ -60,6 +60,12 @@ class BackupService:
             paths.ensure_layout()
             self.on_event("info", "شروع بکاپ…")
 
+            # Pull the latest code in before zipping. Without this a scheduled
+            # backup would keep archiving whatever the last manual transfer
+            # happened to catch - which is exactly the work you would lose.
+            if config.sync_projects_before_backup and config.project_sources:
+                self._sync_projects(config, progress)
+
             result = backup.run_backup(
                 backup_dir=config.backup_dir,
                 keep=config.keep_count,
@@ -103,6 +109,16 @@ class BackupService:
             return summary
         finally:
             self._busy.release()
+
+    def _sync_projects(self, config, progress: ProgressFn | None) -> None:
+        sources = projects.resolve(config.project_sources)
+        missing = [s.name for s in sources if not s.exists]
+        if missing:
+            self.on_event("warn", f"این مسیرهای پروژه پیدا نشدند: {', '.join(missing)}")
+        results = projects.collect(sources, progress=progress)
+        copied = sum(r.bytes_copied for r in results if r.ok)
+        if copied:
+            self.on_event("info", f"پروژه‌ها هم‌گام شدند - {copied / 1048576:,.1f} مگابایت")
 
     def run_in_background(
         self, progress: ProgressFn | None = None, done: Callable[[RunSummary], None] | None = None
