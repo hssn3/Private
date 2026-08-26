@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  python:
+    name: Python tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test dependencies
+        # The GUI and Windows-only packages are not needed for the core tests.
+        run: pip install pytest Pillow requests
+      - name: Run tests
+        working-directory: windows-app
+        run: python -m pytest tests -q
+
+  server:
+    name: Server checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install
+      - name: Syntax check
+        run: node --check server/server.js
+      - name: Boot and hit the health endpoint
+        env:
+          BACKUP_TOKEN: ci-token-0123456789abcdef
+          DATA_DIR: /tmp/vault
+          PORT: "3000"
+        run: |
+          node server/server.js &
+          for i in $(seq 1 20); do
+            sleep 0.5
+            curl -sf localhost:3000/api/health && break
+          done
+          curl -sf localhost:3000/api/health | grep -q '"ok":true'
+          test "$(curl -s -o /dev/null -w '%{http_code}' localhost:3000/api/files)" = "401"

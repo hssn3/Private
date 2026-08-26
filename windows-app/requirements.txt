@@ -1,0 +1,7 @@
+customtkinter==5.2.2
+Pillow==10.4.0
+requests==2.32.3
+pywin32==306; sys_platform == "win32"
+pywinstyles==1.8; sys_platform == "win32"
+arabic-reshaper==3.0.0
+python-bidi==0.4.2

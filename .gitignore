@@ -1,0 +1,22 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Server data (never commit backups)
+server/data/
+data/
+*.zip
+
+# Python / build output
+__pycache__/
+*.py[cod]
+windows-app/.venv/
+windows-app/dist/
+windows-app/work/
+windows-app/build/*.spec.bak
+
+# The portable folder is produced by the build, not tracked
+/0/
+
+# Local secrets
+.env
