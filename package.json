@@ -1,0 +1,17 @@
+{
+  "name": "backup-suite",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Backup Vault - the cloud half of Backup Suite. Deploys to Railway from the repository root.",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node server/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

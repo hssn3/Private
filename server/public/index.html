@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Backup Vault</title>
+<style>
+  :root{
+    --bg:#070b16; --glass:rgba(255,255,255,.06); --glass-2:rgba(255,255,255,.09);
+    --stroke:rgba(255,255,255,.12); --text:#eaf0ff; --muted:#93a1c4;
+    --accent:#5b8cff; --accent-2:#8b5cf6; --ok:#34d399; --bad:#f87171;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; color:var(--text); background:var(--bg);
+    font-family:"Vazirmatn","Segoe UI",system-ui,-apple-system,sans-serif;
+    background-image:
+      radial-gradient(60rem 40rem at 85% -10%, rgba(91,140,255,.28), transparent 60%),
+      radial-gradient(50rem 35rem at 5% 110%, rgba(139,92,246,.25), transparent 60%);
+    background-attachment:fixed;
+  }
+  .wrap{max-width:1000px;margin:0 auto;padding:32px 20px 64px}
+  .card{
+    background:var(--glass); border:1px solid var(--stroke); border-radius:20px;
+    backdrop-filter:blur(22px) saturate(150%); -webkit-backdrop-filter:blur(22px) saturate(150%);
+    box-shadow:0 18px 50px rgba(0,0,0,.45); padding:24px;
+  }
+  header.card{display:flex;align-items:center;gap:14px;margin-bottom:20px;flex-wrap:wrap}
+  .logo{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));font-size:22px}
+  h1{font-size:19px;margin:0}
+  .sub{color:var(--muted);font-size:13px;margin-top:3px}
+  .spacer{flex:1}
+  button{
+    font:inherit;color:var(--text);cursor:pointer;border:1px solid var(--stroke);
+    background:var(--glass-2);border-radius:12px;padding:9px 16px;transition:.16s;
+  }
+  button:hover{background:rgba(255,255,255,.16);transform:translateY(-1px)}
+  button.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));border-color:transparent;font-weight:600}
+  button.danger:hover{background:rgba(248,113,113,.22);border-color:rgba(248,113,113,.5)}
+  input{
+    font:inherit;color:var(--text);background:rgba(0,0,0,.3);border:1px solid var(--stroke);
+    border-radius:12px;padding:12px 14px;width:100%;outline:none;
+  }
+  input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(91,140,255,.2)}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+  .stat{background:var(--glass);border:1px solid var(--stroke);border-radius:16px;padding:14px 16px;
+    backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+  .stat b{display:block;font-size:22px;margin-top:4px}
+  .stat span{color:var(--muted);font-size:12px}
+  .row{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:14px;
+    background:rgba(255,255,255,.04);border:1px solid transparent;margin-bottom:10px;transition:.16s}
+  .row:hover{background:rgba(255,255,255,.09);border-color:var(--stroke)}
+  .row .ico{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;
+    background:rgba(91,140,255,.16);font-size:18px;flex:none}
+  .row .meta{flex:1;min-width:0}
+  .row .name{font-weight:600;font-size:14px;word-break:break-all;direction:ltr;text-align:left}
+  .row .when{color:var(--muted);font-size:12px;margin-top:3px}
+  .newest{border-color:rgba(52,211,153,.45);background:rgba(52,211,153,.09)}
+  .tag{font-size:11px;color:var(--ok);border:1px solid rgba(52,211,153,.4);border-radius:999px;padding:2px 9px}
+  .empty{text-align:center;color:var(--muted);padding:44px 12px}
+  .login{max-width:420px;margin:12vh auto}
+  .msg{margin-top:12px;font-size:13px;min-height:18px}
+  .msg.bad{color:var(--bad)} .msg.ok{color:var(--ok)}
+  .hidden{display:none!important}
+  @media(max-width:520px){ .row{flex-wrap:wrap} .row .meta{flex-basis:100%} }
+</style>
+</head>
+<body>
+
+<div id="login" class="wrap hidden">
+  <div class="card login">
+    <div class="logo" style="margin-bottom:14px">🔐</div>
+    <h1>ورود به مخزن بکاپ</h1>
+    <p class="sub" style="margin-bottom:18px">توکنی که در متغیر <code>BACKUP_TOKEN</code> تنظیم کرده‌ای را وارد کن.</p>
+    <input id="token" type="password" placeholder="BACKUP_TOKEN" autocomplete="current-password">
+    <button class="primary" id="loginBtn" style="width:100%;margin-top:14px">ورود</button>
+    <div id="loginMsg" class="msg"></div>
+  </div>
+</div>
+
+<div id="app" class="wrap hidden">
+  <header class="card">
+    <div class="logo">🗄️</div>
+    <div>
+      <h1>مخزن بکاپ</h1>
+      <div class="sub">آخرین نسخه‌های فولدر <b>0</b> که از ویندوز آپلود شده‌اند</div>
+    </div>
+    <div class="spacer"></div>
+    <button id="refreshBtn">↻ تازه‌سازی</button>
+    <button id="logoutBtn" class="danger">خروج</button>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><span>تعداد بکاپ</span><b id="sCount">–</b></div>
+    <div class="stat"><span>حجم کل</span><b id="sSize">–</b></div>
+    <div class="stat"><span>سقف چرخه</span><b id="sMax">–</b></div>
+    <div class="stat"><span>آخرین بکاپ</span><b id="sLast" style="font-size:15px">–</b></div>
+  </div>
+
+  <div class="card">
+    <div id="list"><div class="empty">در حال بارگذاری…</div></div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+function fmtSize(bytes){
+  if(!bytes) return '0 B';
+  const units=['B','KB','MB','GB','TB'];
+  const i=Math.min(units.length-1, Math.floor(Math.log(bytes)/Math.log(1024)));
+  return (bytes/Math.pow(1024,i)).toFixed(i?1:0)+' '+units[i];
+}
+function fmtWhen(ms){
+  const d=new Date(ms), diff=(Date.now()-ms)/1000;
+  let rel;
+  if(diff<90) rel='همین الان';
+  else if(diff<3600) rel=Math.round(diff/60)+' دقیقه پیش';
+  else if(diff<86400) rel=Math.round(diff/3600)+' ساعت پیش';
+  else rel=Math.round(diff/86400)+' روز پیش';
+  return rel+' · '+d.toLocaleString('fa-IR');
+}
+
+async function api(path, opts){
+  const res = await fetch(path, Object.assign({credentials:'same-origin'}, opts));
+  if(res.status===401){ showLogin(); throw new Error('unauthorized'); }
+  return res;
+}
+
+function showLogin(){ $('login').classList.remove('hidden'); $('app').classList.add('hidden'); }
+function showApp(){ $('login').classList.add('hidden'); $('app').classList.remove('hidden'); load(); }
+
+async function load(){
+  const res = await api('/api/files');
+  const data = await res.json();
+  if(!data.ok) return;
+  $('sCount').textContent = data.files.length;
+  $('sSize').textContent = fmtSize(data.totalSize);
+  $('sMax').textContent = data.maxBackups;
+  $('sLast').textContent = data.files.length ? fmtWhen(data.files[0].mtime).split(' · ')[0] : '—';
+
+  const list = $('list');
+  if(!data.files.length){
+    list.innerHTML = '<div class="empty">هنوز بکاپی آپلود نشده است.<br>از برنامهٔ ویندوز، مقصد ابری را به همین آدرس وصل کن.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  data.files.forEach((f, idx) => {
+    const row = document.createElement('div');
+    row.className = 'row' + (idx===0 ? ' newest' : '');
+    row.innerHTML = `
+      <div class="ico">📦</div>
+      <div class="meta">
+        <div class="name">${f.name}</div>
+        <div class="when">${fmtSize(f.size)} · ${fmtWhen(f.mtime)}</div>
+      </div>
+      ${idx===0 ? '<span class="tag">آخرین</span>' : ''}
+      <button class="primary" data-dl="${encodeURIComponent(f.name)}">⬇ دانلود</button>
+      <button class="danger" data-rm="${encodeURIComponent(f.name)}">🗑</button>`;
+    list.appendChild(row);
+  });
+}
+
+$('list').addEventListener('click', async (e) => {
+  const dl = e.target.closest('[data-dl]');
+  if(dl){ window.location.href = '/api/download/' + dl.dataset.dl; return; }
+  const rm = e.target.closest('[data-rm]');
+  if(rm){
+    if(!confirm('این بکاپ برای همیشه حذف شود؟')) return;
+    await api('/api/files/' + rm.dataset.rm, {method:'DELETE'});
+    load();
+  }
+});
+
+$('refreshBtn').onclick = load;
+$('logoutBtn').onclick = async () => { await fetch('/api/logout',{method:'POST'}); showLogin(); };
+
+$('loginBtn').onclick = async () => {
+  const msg = $('loginMsg');
+  msg.className='msg'; msg.textContent='در حال بررسی…';
+  const res = await fetch('/api/login', {
+    method:'POST', headers:{'content-type':'application/json'},
+    credentials:'same-origin', body: JSON.stringify({token: $('token').value})
+  });
+  if(res.ok){ msg.className='msg ok'; msg.textContent='وارد شدید'; showApp(); }
+  else { msg.className='msg bad'; msg.textContent='توکن نادرست است.'; }
+};
+$('token').addEventListener('keydown', e => { if(e.key==='Enter') $('loginBtn').click(); });
+
+(async () => {
+  const res = await fetch('/api/session', {credentials:'same-origin'});
+  const data = await res.json();
+  data.ok ? showApp() : showLogin();
+})();
+</script>
+</body>
+</html>
